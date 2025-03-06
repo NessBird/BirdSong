@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (BirdSong)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10 (BirdSong)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12.3 WSL (Ubuntu): (/home/ness/PycharmProjects/my_project/tf-gpu-env/bin/python_dir/bin/python)" project-jdk-type="Python SDK" />
 </project>
