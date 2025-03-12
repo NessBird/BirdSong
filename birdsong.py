@@ -1,43 +1,40 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
-import os
 import numpy as np
-import keras
-from keras import layers
-from tensorflow import data as tf_data
+import pandas as pd
 import matplotlib.pyplot as plt
 
-from datasets import load_dataset
+import keras
+from keras import layers
 
-# ds = load_dataset("Saads/birdsounds")
+import tensorflow as tf
+from tensorflow import data as tf_data
 
-image_size = (180, 180)
+
+data_directory = './images/'
+
+# Load labels
+train_labels_df = pd.read_csv(data_directory + 'train_labels.csv')
+test_labels_df = pd.read_csv(data_directory + 'test_labels.csv')
+
+# Load images
+train_image_paths = [data_directory + 'train/' + fname for fname in train_labels_df['filename']]
+train_labels = train_labels_df['label'].values
+
+test_image_paths = [data_directory + 'test/' + fname for fname in test_labels_df['filename']]
+test_labels = test_labels_df['label'].values
+
+image_size = (1000, 500)
 batch_size = 128
 
-train_ds, val_ds = keras.utils.image_dataset_from_directory(
-    "PetImages",
-    validation_split=0.2,
-    subset="both",
-    seed=1337,
-    image_size=image_size,
-    batch_size=batch_size,
-)
-
-
-plt.figure(figsize=(10, 10))
-for images, labels in train_ds.take(1):
-    for i in range(9):
-        ax = plt.subplot(3, 3, i + 1)
-        plt.imshow(np.array(images[i]).astype("uint8"))
-        plt.title(int(labels[i]))
-        plt.axis("off")
-
-        data_augmentation_layers = [
-            layers.RandomFlip("horizontal"),
-            layers.RandomRotation(0.1),
-        ]
-
+def load_image(image_path, label):
+    image = tf.io.read_file(image_path)
+    image = tf.image.decod_png(image, channels=3)
+    image = tf.image.resize(image,image_size)
+    image = image / 255.0
+    return image, label
+train_ds = tf.data.Dataset.from_tensor_slices((train_image_paths, train_labels))
 
 def data_augmentation(images):
     for layer in data_augmentation_layers:
