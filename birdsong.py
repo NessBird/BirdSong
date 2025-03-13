@@ -92,10 +92,10 @@ from datasets import load_dataset
 
 image_size = (700, 700)
 batch_size = 128
-data_dir = "Eddie-train"
+data_dir = "images"
 print(f"Checking directory existence: {os.path.exists(data_dir)}")
 train_ds, val_ds = keras.utils.image_dataset_from_directory(
-    "Eddie-train",
+    data_dir,
     validation_split=0.2,
     subset="both",
     seed=1337,
@@ -103,26 +103,15 @@ train_ds, val_ds = keras.utils.image_dataset_from_directory(
     batch_size=batch_size,
 )
 
-
-plt.figure(figsize=(10, 10))
-for images, labels in train_ds.take(1):
-    for i in range(9):
-        ax = plt.subplot(3, 3, i + 1)
-        plt.imshow(np.array(images[i]).astype("uint8"))
-        plt.title(int(labels[i]))
-        plt.axis("off")
-
-        data_augmentation_layers = [
-            layers.RandomFlip("horizontal"),
-            layers.RandomRotation(0.1),
-        ]
-
-
 def data_augmentation(images):
     for layer in data_augmentation_layers:
         images = layer(images)
     return images
 
+data_augmentation_layers = [
+    layers.RandomFlip("horizontal"),
+    layers.RandomRotation(0.1),
+]
 
 augmented_train_ds = train_ds.map(
     lambda x, y: (data_augmentation(x), y))
@@ -135,7 +124,6 @@ train_ds = train_ds.map(
 # Prefetching samples in GPU memory helps maximize GPU utilization.
 train_ds = train_ds.prefetch(tf_data.AUTOTUNE)
 val_ds = val_ds.prefetch(tf_data.AUTOTUNE)
-
 
 def make_model(input_shape, num_classes):
     inputs = keras.Input(shape=input_shape)
@@ -181,11 +169,7 @@ def make_model(input_shape, num_classes):
     outputs = layers.Dense(units, activation=None)(x)
     return keras.Model(inputs, outputs)
 
-
 model = make_model(input_shape=image_size + (3,), num_classes=2)
-#keras.utils.plot_model(model, show_shapes=True)
-
-
 
 epochs = 25
 
@@ -203,8 +187,6 @@ model.fit(
     callbacks=callbacks,
     validation_data=val_ds,
 )
-
-
 
 img = keras.utils.load_img("PetImages/Cat/6779.jpg", target_size=image_size)
 plt.imshow(img)
