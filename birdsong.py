@@ -8,15 +8,94 @@ from keras import layers
 from tensorflow import data as tf_data
 import matplotlib.pyplot as plt
 
+import shutil
+from PIL import Image
+from PIL.ExifTags import TAGS
+import tqdm
+
+def organize_images_by_header_labels(input_dir, output_dir, label_tag='ImageDescription'):
+    """
+    Organizes images into subdirectories based on metadata in their headers.
+
+    Parameters:
+        input_dir: Directory containing the images
+        output_dir: Directory to create the organized structure
+        label_tag: The EXIF tag to use as the label (default: 'ImageDescription')
+    """
+
+    # Track categories for statistics
+    categories = {}
+    unknown_count = 0
+
+    # Process all images
+    image_exts = ['.png']
+    for filename in tqdm.tqdm(os.listdir(input_dir)):
+        src_path = os.path.join(input_dir, filename)
+
+        # Extract label from image header
+        try:
+            with Image.open(src_path) as img:
+                exif_data = img._getexif()
+                if exif_data is not None:
+                    # Convert numerical EXIF tags to readable names
+                    exif = {TAGS.get(tag, tag): value for tag, value in exif_data.items()}
+
+                    # Get label from specified tag
+                    label = exif.get(label_tag)
+
+                    if not label:
+                        # Try some other common tags if the specified one is not found
+                        for alt_tag in ['UserComment', 'XPComment', 'Comment']:
+                            label = exif.get(alt_tag)
+                            if label:
+                                break
+                else:
+                    label = None
+        except Exception as e:
+            print(f"Error reading {filename}: {e}")
+            label = None
+
+        # Clean up and process the label
+        if label:
+            if isinstance(label, bytes):
+                label = label.decode('utf-8', errors='ignore').strip()
+            label = label.strip().replace('/', '_')  # Sanitize for file path
+        else:
+            label = "unknown"
+            unknown_count += 1
+
+        # Create category directory if needed
+        category_dir = os.path.join(output_dir, label)
+        if not os.path.exists(category_dir):
+            os.makedirs(category_dir)
+
+        # Copy the image to its category directory
+        dst_path = os.path.join(category_dir, filename)
+        shutil.copy2(src_path, dst_path)
+
+        # Update statistics
+        categories[label] = categories.get(label, 0) + 1
+
+# Usage example
+# organized_dir = organize_images_by_header_labels('path/to/images', 'path/to/organized')
+
+# Now create your Keras dataset
+# from tensorflow.keras.utils import image_dataset_from_directory
+
+# dataset = image_dataset_from_directory(
+#     organized_dir,
+#     image_size=(224, 224),
+#     batch_size=32
+# )
+
 from datasets import load_dataset
 
-# ds = load_dataset("Saads/birdsounds")
-
-image_size = (180, 180)
+image_size = (700, 700)
 batch_size = 128
-
+data_dir = "Eddie-train"
+print(f"Checking directory existence: {os.path.exists(data_dir)}")
 train_ds, val_ds = keras.utils.image_dataset_from_directory(
-    "PetImages",
+    "Eddie-train",
     validation_split=0.2,
     subset="both",
     seed=1337,
