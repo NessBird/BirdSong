@@ -36,17 +36,18 @@ train_ds = tf.data.Dataset.from_tensor_slices((train_image_paths, train_labels))
 train_ds = train_ds.map(load_image, num_parallel_calls=tf_data.AUTOTUNE)
 train_ds = train_ds.batch(batch_size).prefetch(tf_data.AUTOTUNE)
 
-# Calculate class weights inversely proportional to frequency
-class_weights = {}
-for i, count in zip(unique, counts):
-    class_weights[i] = len(train_labels) / (len(unique) * count)
-
-# Apply in training
-model.fit(train_ds, epochs=epochs, class_weight=class_weights)
-
+# After training with a few samples
+predictions = model.predict(train_ds)
+print("Prediction shape:", predictions.shape)
+print("Sample raw outputs:")
+print(predictions)
+print("\nSum of each prediction row (should be close to 1.0 with softmax):")
+print(np.sum(predictions, axis=1))
+print("\nMax value in each prediction:")
+print(np.max(predictions, axis=1))
+print("\nPredicted classes:", np.argmax(predictions, axis=1))
 
 print("Making predictions...")
-predictions = model.predict(train_ds)
 predicted_classes = np.argmax(predictions, axis=1)
 true_classes = np.concatenate([y for x, y in train_ds], axis=0)
 accuracy = np.mean(predicted_classes == true_classes)

@@ -27,7 +27,7 @@ test_image_paths = [data_directory + 'test/' + fname for fname in test_labels_df
 test_labels = test_labels_df['label'].values
 
 # Set image size
-image_size = (500, 500)  # Example size, you can experiment with different sizes
+image_size = (224, 224)  # Example size, you can experiment with different sizes
 batch_size = 128
 
 print("Defining load_image function...")
@@ -110,13 +110,10 @@ def make_model(input_shape, num_classes):
     x = layers.Activation("relu")(x)
 
     x = layers.GlobalAveragePooling2D()(x)
-    if num_classes == 2:
-        units = 1
-    else:
-        units = num_classes
+    units = num_classes
 
     x = layers.Dropout(0.25)(x)
-    # We specify activation=None so as to return logits
+    # Add softmax activation for proper probability outputs
     outputs = layers.Dense(units, activation=None)(x)
     return keras.Model(inputs, outputs)
 
@@ -125,6 +122,7 @@ num_classes = 264  # Update this to the actual number of classes in your dataset
 print("Creating the model...")
 model = make_model(input_shape=image_size + (3,), num_classes=num_classes)
 
+epochs = 5
 
 callbacks = [
     keras.callbacks.ModelCheckpoint("save_at_{epoch}.keras"),
@@ -132,31 +130,44 @@ callbacks = [
 
 print("Compiling the model...")
 model.compile(
-    optimizer=keras.optimizers.Adam(3e-4),
+    optimizer=keras.optimizers.Adam(0.001),
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=[keras.metrics.SparseCategoricalAccuracy(name="acc")],
 )
 
 print("Starting training...")
-epochs = 25
 model.fit(
     train_ds,
     epochs=epochs,
     callbacks=callbacks,
-    validation_data=test_ds,
 )
+# Print weights after training
+sample_weights_after = model.layers[1].get_weights()[0][0, 0:5]
+print("After training:", sample_weights_after)
 
-print("Loading and preprocessing example image...")
-img = keras.utils.load_img("./images/train/spectrogram_6.png", target_size=image_size)  # Corrected path and variable
-img_array = keras.utils.img_to_array(img)
-img_array = tf.expand_dims(img_array, 0)  # Corrected function
+# After training with a few samples
+sample_predictions = model.predict(train_ds)
+print("Prediction shape:", sample_predictions.shape)
+print("Sample raw outputs:")
+print(sample_predictions)
+print("\nSum of each prediction row (should be close to 1.0 with softmax):")
+print(np.sum(sample_predictions, axis=1))
+print("\nMax value in each prediction:")
+print(np.max(sample_predictions, axis=1))
+print("\nPredicted classes:", np.argmax(sample_predictions, axis=1))
+
+sample_weights_predict = model.layers[1].get_weights()[0][0, 0:5]
+print("During prediction:", sample_weights_predict)
+
+exit()
+
 
 print("Making predictions...")
-predictions = model.predict(test_ds)
+predictions = model.predict(train_ds)
 predicted_classes = np.argmax(predictions, axis=1)
 print("Number of unique predictions:", len(np.unique(predicted_classes)))
 print("Most common predictions:", np.bincount(predicted_classes).argsort()[-5:])
 
-true_classes = np.concatenate([y for x, y in test_ds], axis=0)
+true_classes = np.concatenate([y for x, y in train_ds], axis=0)
 accuracy = np.mean(predicted_classes == true_classes)
 print(f"Average accuracy: {accuracy:.2f}")
