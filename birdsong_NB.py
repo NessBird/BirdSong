@@ -1,6 +1,6 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
-import PIL
 import tensorflow as tf
 from keras import Sequential
 
@@ -10,47 +10,45 @@ from tensorflow.keras import layers
 batch_size = 32
 # The raw images are 1000x500, but we can usefully reduce them.
 img_height = 256
-img_width = 128
+img_width = 256
 
-data_dir = './junfan_subdirs/'
+data_dir = './eddie_subdirs/'
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
-    data_dir + '/train',
+    data_dir,
     validation_split=0.2,
     labels='inferred',
     label_mode='int',
     subset="training",
-    seed=123,
     image_size=(img_height, img_width),
-    batch_size=batch_size)
+    batch_size=batch_size,
+    seed=112164)
 
-val_ds = tf.keras.utils.image_dataset_from_directory(
-    data_dir + 'test',
+test_ds = tf.keras.utils.image_dataset_from_directory(
+    data_dir,
     validation_split=0.2,
+    labels='inferred',
+    label_mode='int',
     subset="validation",
-    seed=123,
     image_size=(img_height, img_width),
-    batch_size=batch_size)
+    batch_size=batch_size,
+    seed=101008)
 
 for image_batch, labels_batch in train_ds:
     print(image_batch.shape)
     print(labels_batch.shape)
     break
 
-
 AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+test_ds = test_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 
-num_classes = 257
+num_classes = 217
 
 data_augmentation = keras.Sequential(
   [
-    layers.RandomFlip("horizontal",
-                      input_shape=(img_height,
-                                  img_width,
-                                  3)),
+    layers.RandomFlip("horizontal", input_shape=(img_height, img_width, 3)),
     layers.RandomRotation(0.1),
     layers.RandomZoom(0.1),
   ]
@@ -76,12 +74,25 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 model.summary()
+callback_file = 'callback.keras'
+try:
+    os.remove(callback_file)
+except:
+    pass
 
-epochs=10
+model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    filepath=callback_file,
+    monitor='val_accuracy',
+    mode='max',
+    save_weights_only=False,
+    save_best_only=True)
+
+epochs=50
 history = model.fit(
-  train_ds,
-  validation_data=val_ds,
-  epochs=epochs
+    train_ds,
+    epochs=epochs,
+    validation_data=test_ds,
+    callbacks=[model_checkpoint_callback]
 )
 
 acc = history.history['accuracy']
