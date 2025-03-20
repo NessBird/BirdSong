@@ -24,10 +24,7 @@ prediction_ds = tf.keras.utils.image_dataset_from_directory(
     seed=15506)
 
 # Check if the model can still predict from the dataset. It's really the same as the training set + validation set.
-normalization_layer = tf.keras.layers.Rescaling(1./255)
-prediction_ds = prediction_ds.map(lambda x, y: (normalization_layer(x), y))
-
 results = model.evaluate(prediction_ds)
 
-print(f"Test loss: {results[0]:.4f}")
-print(f"Test accuracy: {results[1]:.4f}")
+print(f"Test loss: {results[0]:.2f}")
+print(f"Test accuracy: {results[1]:.2f}")
