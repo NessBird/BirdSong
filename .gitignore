@@ -7,3 +7,10 @@
 /dataSources/
 /dataSources.local.xml
 /spectrogram/
+/spectrograms/
+spectrogram_eddie/
+spectrogram_junfan/
+labels_eddie.csv
+labels_junfan.csv
+logs/
+*.pth
